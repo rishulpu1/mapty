@@ -57,6 +57,7 @@ const inputElevation = document.querySelector('.form__input--elevation');
 class App {
   #map;
   #mapEvent;
+  #workouts = [];
   constructor() {
     this._getPosition();
     inputType.addEventListener('change', this._toggleElevationField);
@@ -96,15 +97,60 @@ class App {
     inputCadence.closest('.form__row').classList.toggle('form__row--hidden');
   }
   _newWorkOut(e) {
+    //Check if data is valid
+    const validateInput = (...inputs) =>
+      inputs.every(inp => Number.isFinite(inp));
+    const validatePositiveInput = (...inputs) => inputs.every(inp => inp > 0);
+
     e.preventDefault();
+    const { lat, lng } = this.#mapEvent.latlng;
+    let workout;
+    //Get data from form
+    const distance = Number(inputDistance.value);
+    const duration = Number(inputDuration.value);
+    const type = inputType.value;
+
+    //if workout is running , create running object
+    if (type === 'running') {
+      const cadence = Number(inputCadence.value);
+      //
+      if (
+        !validateInput(distance, duration, cadence) ||
+        !validatePositiveInput(distance, duration, cadence)
+      )
+        return alert('Input value should be positive');
+
+      workout = new Running([lat, lng], distance, duration, cadence);
+    }
+
+    //if workout is cycling , create cycling object
+    if (type === 'cycling') {
+      const elevation = Number(inputElevation.value);
+      if (
+        !validateInput(distance, duration, elevation) ||
+        !validatePositiveInput(distance, duration)
+      ) {
+        return alert('Input value should be positive');
+      }
+      workout = new Cycling([lat, lng], distance, duration, elevation);
+    }
+    //add new object to workout array;
+    this.#workouts.push(workout);
+    // console.log(this.#workouts);
+
+    //Render workout on map as marker
+
+    //Render workout on list
+    this.renderWorkoutMarker(workout);
+    //clear input fields
     inputDistance.value =
       inputCadence.value =
       inputDuration.value =
       inputElevation.value =
         '';
-    const { lat, lng } = this.#mapEvent.latlng;
-
-    L.marker([lat, lng])
+  }
+  renderWorkoutMarker(workout) {
+    L.marker(workout.coords)
       .addTo(this.#map)
       .bindPopup(
         L.popup({
@@ -112,7 +158,7 @@ class App {
           minWidth: 100,
           autoClose: false,
           closeOnClick: false,
-          className: 'running-popup',
+          className: `${workout.type}-popup`,
         })
       )
       .setPopupContent('Workout')
