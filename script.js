@@ -62,12 +62,14 @@ const inputElevation = document.querySelector('.form__input--elevation');
 
 class App {
   #map;
+  #mapZoomLevel = 13;
   #mapEvent;
   #workouts = [];
   constructor() {
     this._getPosition();
     inputType.addEventListener('change', this._toggleElevationField);
     form.addEventListener('submit', this._newWorkOut.bind(this));
+    containerWorkouts.addEventListener('click', this._moveToMarker.bind(this));
   }
   _getPosition() {
     if (navigator.geolocation) {
@@ -84,7 +86,7 @@ class App {
     const { longitude } = position.coords;
 
     const coords = [latitude, longitude];
-    this.#map = L.map('map').setView(coords, 13);
+    this.#map = L.map('map').setView(coords, this.#mapZoomLevel);
 
     L.tileLayer('https://tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
       attribution:
@@ -201,7 +203,7 @@ class App {
       html += `
       <div class="workout__details">
           <span class="workout__icon">⚡️</span>
-          <span class="workout__value">${workout.pace}</span>
+          <span class="workout__value">${workout.pace.toFixed(1)}</span>
           <span class="workout__unit">min/km</span>
         </div>
         <div class="workout__details">
@@ -215,7 +217,7 @@ class App {
       html += `
       <div class="workout__details">
           <span class="workout__icon">⚡️</span>
-          <span class="workout__value">${workout.speed}</span>
+          <span class="workout__value">${workout.speed.toFixed(1)}</span>
           <span class="workout__unit">km/h</span>
         </div>
         <div class="workout__details">
@@ -227,6 +229,21 @@ class App {
       `;
 
     form.insertAdjacentHTML('afterend', html);
+  }
+  _moveToMarker(e) {
+    const workoutEl = e.target.closest('.workout');
+
+    if (!workoutEl) return;
+    const workout = this.#workouts.find(
+      work => work.id === workoutEl.dataset.id
+    );
+    // console.log(workout);
+    this.#map.setView(workout.coords, this.#mapZoomLevel, {
+      animate: true,
+      pan: {
+        duration: 1,
+      },
+    });
   }
 }
 const app = new App();
